@@ -41,8 +41,13 @@ if [ "$PROVIDER" = "anthropic" ] && ! grep -q '^ANTHROPIC_API_KEY=sk' .env 2>/de
 fi
 
 if [ "$PROVIDER" = "ollama" ]; then
+  OLLAMA=""
   MODEL="$(sed -n 's/^ollama_model = "\([^"]*\)".*/\1/p' config.toml | head -1)"; MODEL="${MODEL:-llama3.2}"
-  if ! command -v ollama >/dev/null 2>&1; then
+  # Find ollama even if it isn't on PATH (Mac app bundle, Homebrew, /usr/local)
+  for CAND in ollama /usr/local/bin/ollama /opt/homebrew/bin/ollama "/Applications/Ollama.app/Contents/Resources/ollama" "$HOME/Applications/Ollama.app/Contents/Resources/ollama"; do
+    if command -v "$CAND" >/dev/null 2>&1 || [ -x "$CAND" ]; then OLLAMA="$CAND"; break; fi
+  done
+  if [ -z "$OLLAMA" ]; then
     echo
     echo "Vyron's free brain needs the Ollama app. Install it from https://ollama.com/download"
     echo "then run this file again."
@@ -52,11 +57,12 @@ if [ "$PROVIDER" = "ollama" ]; then
   fi
   if ! curl -s -m 2 http://localhost:11434/ >/dev/null 2>&1; then
     echo "Starting Ollama..."
-    (ollama serve >/dev/null 2>&1 &) ; sleep 3
+    if [ -d /Applications/Ollama.app ]; then open -a Ollama 2>/dev/null || true; fi
+    ("$OLLAMA" serve >/dev/null 2>&1 &) ; sleep 4
   fi
-  if ! ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
+  if ! "$OLLAMA" list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
     echo "First run: downloading the free model '$MODEL' (a few GB, one time)..."
-    ollama pull "$MODEL"
+    "$OLLAMA" pull "$MODEL"
   fi
 fi
 
