@@ -24,3 +24,7 @@ stt_model = "nova-3"            # Deepgram model
 stt_language = "en"
 tts_voice_id = "21m00Tcm4TlvDq8ikWAM"   # ElevenLabs voice id (default library voice; change to taste)
 tts_model_id = "eleven_turbo_v2_5"     # low-latency ElevenLabs model
+
+[memory]
+path = "state/memory.md"        # one fact per line; edit by hand any time
+max_facts_in_prompt = 40        # above this, only facts relevant to the current turn are loaded

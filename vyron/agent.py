@@ -13,6 +13,7 @@ from .provider import ModelProvider, ModelReply, ProviderError, TextCallback
 from .tools import ToolRegistry
 
 ToolEventCallback = Callable[[dict[str, Any]], None]
+ContextProvider = Callable[[str], str]  # (latest user text) -> extra system-prompt text, or ""
 
 
 def build_system_prompt(config) -> str:
@@ -41,9 +42,16 @@ class Agent:
         self.history: list[dict[str, Any]] = []  # short-term memory: this session only
         self.name = config["assistant"]["name"]
         self.max_tool_rounds = int(config.get("model", "max_tool_rounds", 10))
+        # Extra context (long-term memory, pending notices, ...) appended per turn.
+        self.context_providers: list[ContextProvider] = []
 
-    def system_prompt(self) -> str:
-        return build_system_prompt(self.config)
+    def system_prompt(self, user_text: str = "") -> str:
+        parts = [build_system_prompt(self.config)]
+        for provide in self.context_providers:
+            extra = provide(user_text)
+            if extra:
+                parts.append(extra)
+        return "\n\n".join(parts)
 
     def run_turn(
         self,
@@ -63,7 +71,7 @@ class Agent:
         for _ in range(self.max_tool_rounds + 1):
             try:
                 reply: ModelReply = self.provider.complete(
-                    self.system_prompt(), self.history, self.tools.specs(), on_text
+                    self.system_prompt(user_text), self.history, self.tools.specs(), on_text
                 )
             except ProviderError as e:
                 # Roll back to before this turn so the next one starts clean.

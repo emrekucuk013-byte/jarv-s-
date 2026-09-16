@@ -8,6 +8,7 @@ import sys
 from . import __version__
 from .agent import Agent
 from .config import load_config, load_env
+from .memory import default_store, register_tools as register_memory_tools
 from .provider import ProviderError, make_provider
 from .tools import default_registry
 
@@ -56,11 +57,22 @@ def main(argv: list[str] | None = None) -> int:
     except ProviderError as e:
         print(f"Can't start: {e}", file=sys.stderr)
         return 2
-    agent = Agent(config, provider, default_registry(config))
+    agent = build_agent(config, provider)
     if args.voice:
         return voice_mode(agent, config)
     text_loop(agent)
     return 0
+
+
+def build_agent(config, provider) -> Agent:
+    """The one place the shared agent core is assembled: tools, memory, and (later) notices."""
+    registry = default_registry(config)
+    memory = default_store(config)
+    register_memory_tools(registry, memory)
+    agent = Agent(config, provider, registry)
+    limit = int(config.get("memory", "max_facts_in_prompt", 40))
+    agent.context_providers.append(lambda user_text: memory.prompt_block(user_text, limit))
+    return agent
 
 
 def voice_mode(agent: Agent, config) -> int:
