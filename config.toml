@@ -1,0 +1,15 @@
+# Vyron configuration. Edit freely; no code change needed.
+
+[assistant]
+name = "Vyron"
+purpose = "a personal daily-driver assistant that acts on my behalf, remembers me, and reaches out only when it counts"
+tone = "warm, plain-spoken, and brief"
+
+[model]
+provider = "anthropic"          # "anthropic" or "fake" (offline, for tests)
+name = "claude-opus-5"
+max_tokens = 4096
+effort = "medium"               # low | medium | high | xhigh | max
+# Approximate USD per million tokens, used only for the running cost tally.
+input_usd_per_mtok = 5.0
+output_usd_per_mtok = 25.0
