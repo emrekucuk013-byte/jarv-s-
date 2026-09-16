@@ -28,3 +28,34 @@ tts_model_id = "eleven_turbo_v2_5"     # low-latency ElevenLabs model
 [memory]
 path = "state/memory.md"        # one fact per line; edit by hand any time
 max_facts_in_prompt = 40        # above this, only facts relevant to the current turn are loaded
+
+[heartbeat]
+enabled = true
+tick_seconds = 5                # how often the loop wakes to see what's due
+quiet_hours_start = "22:00"     # non-urgent interruptions wait until quiet hours end
+quiet_hours_end = "07:00"
+state = "state/heartbeat.json"  # persisted "next due" times so a restart doesn't refire everything
+inbox = "state/inbox.json"      # held notices, until you dismiss them
+
+# Each check: name (unique), check (kind: due_reminders | file_watch | ask_agent), every (30s/5m/2h/1d),
+# level (log = wait in the inbox | interrupt = tell me now, outside quiet hours | critical = always now).
+[[heartbeat.checks]]
+name = "due_reminders"
+check = "due_reminders"
+every = "1m"
+level = "interrupt"
+
+[[heartbeat.checks]]
+name = "trigger_file"
+check = "file_watch"
+every = "10s"
+path = "state/trigger.txt"      # touch or edit this file to trigger a notice on purpose
+level = "log"
+
+[[heartbeat.checks]]
+name = "morning_lookahead"
+check = "ask_agent"
+every = "12h"
+level = "log"
+enabled = false                 # flip on once you trust it; costs one model call per run
+prompt = "Look at the user's reminders for today with list_reminders and say whether anything needs attention."
