@@ -49,8 +49,22 @@ def run_doctor() -> int:
             report(False if why == "text mode" else None, f"package {pkg} missing ({why}; pip install -e '.[voice]')")
 
     # Text brain
+    provider = config["model"].get("provider", "ollama")
     key = secret("ANTHROPIC_API_KEY")
-    if not key:
+    if provider == "ollama":
+        host = config["model"].get("ollama_host", "http://localhost:11434")
+        model = config["model"].get("ollama_model", "llama3.2")
+        try:
+            import httpx
+            tags = httpx.get(f"{host}/api/tags", timeout=5).json().get("models", [])
+            have = {m.get("name", "").split(":")[0] for m in tags} | {m.get("name", "") for m in tags}
+            if model in have or model.split(":")[0] in have:
+                report(True, f"Ollama running at {host}; model {model} is downloaded (free brain)")
+            else:
+                report(False, f"Ollama is running but model {model} isn't downloaded: run  ollama pull {model}")
+        except Exception as e:  # noqa: BLE001
+            report(False, f"Ollama not reachable at {host} ({type(e).__name__}). Install/start it: https://ollama.com/download")
+    elif not key:
         report(False, "ANTHROPIC_API_KEY not set: text mode can't start")
     else:
         try:

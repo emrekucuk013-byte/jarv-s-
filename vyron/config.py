@@ -25,7 +25,9 @@ DEFAULTS: dict[str, Any] = {
         "tone": "warm, plain-spoken, and brief",
     },
     "model": {
-        "provider": "anthropic",
+        "provider": "ollama",
+        "ollama_model": "llama3.2",
+        "ollama_host": "http://localhost:11434",
         "name": "claude-opus-5",
         "max_tokens": 4096,
         "effort": "medium",

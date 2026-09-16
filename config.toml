@@ -6,11 +6,21 @@ purpose = "a personal daily-driver assistant that acts on my behalf, remembers m
 tone = "warm, plain-spoken, and brief"
 
 [model]
-provider = "anthropic"          # "anthropic" or "fake" (offline, for tests)
+# Which brain to use:
+#   "ollama"    = free model running on this computer (no key, no bill; needs the Ollama app)
+#   "anthropic" = Claude via API key (smarter; pay per use)
+#   "fake"      = offline stand-in for tests
+provider = "ollama"
+
+# --- ollama ---
+ollama_model = "llama3.2"       # any Ollama model that supports tools, e.g. llama3.2, qwen2.5:7b, llama3.1:8b
+ollama_host = "http://localhost:11434"
+
+# --- anthropic ---
 name = "claude-opus-5"
 max_tokens = 4096
 effort = "medium"               # low | medium | high | xhigh | max
-# Approximate USD per million tokens, used only for the running cost tally.
+# Approximate USD per million tokens, used only for the running cost tally (0 for Ollama).
 input_usd_per_mtok = 5.0
 output_usd_per_mtok = 25.0
 

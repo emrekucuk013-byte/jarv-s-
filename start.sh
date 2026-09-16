@@ -25,17 +25,39 @@ if [ ! -f .venv/.installed ] || [ pyproject.toml -nt .venv/.installed ]; then
   touch .venv/.installed
 fi
 
-if [ ! -f .env ] || ! grep -q '^ANTHROPIC_API_KEY=sk' .env 2>/dev/null; then
+[ -f .env ] || cp .env.example .env
+PROVIDER="${VYRON_PROVIDER:-$(sed -n 's/^provider = "\([a-z]*\)".*/\1/p' config.toml | head -1)}"
+
+if [ "$PROVIDER" = "anthropic" ] && ! grep -q '^ANTHROPIC_API_KEY=sk' .env 2>/dev/null; then
   echo
   echo "Vyron needs your Anthropic API key (get one at https://console.anthropic.com)."
   read -r -p "Paste it here and press Enter: " KEY
-  [ -f .env ] || cp .env.example .env
   if grep -q '^ANTHROPIC_API_KEY=' .env; then
     sed -i.bak "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=$KEY|" .env && rm -f .env.bak
   else
     echo "ANTHROPIC_API_KEY=$KEY" >> .env
   fi
   echo "Saved to .env (kept only on this computer)."
+fi
+
+if [ "$PROVIDER" = "ollama" ]; then
+  MODEL="$(sed -n 's/^ollama_model = "\([^"]*\)".*/\1/p' config.toml | head -1)"; MODEL="${MODEL:-llama3.2}"
+  if ! command -v ollama >/dev/null 2>&1; then
+    echo
+    echo "Vyron's free brain needs the Ollama app. Install it from https://ollama.com/download"
+    echo "then run this file again."
+    command -v open >/dev/null 2>&1 && open "https://ollama.com/download"
+    command -v xdg-open >/dev/null 2>&1 && xdg-open "https://ollama.com/download"
+    exit 1
+  fi
+  if ! curl -s -m 2 http://localhost:11434/ >/dev/null 2>&1; then
+    echo "Starting Ollama..."
+    (ollama serve >/dev/null 2>&1 &) ; sleep 3
+  fi
+  if ! ollama list 2>/dev/null | awk '{print $1}' | grep -qx "$MODEL"; then
+    echo "First run: downloading the free model '$MODEL' (a few GB, one time)..."
+    ollama pull "$MODEL"
+  fi
 fi
 
 if [ "$1" = "--voice" ]; then

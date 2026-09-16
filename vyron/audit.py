@@ -46,8 +46,9 @@ class Audit:
 
 def default_audit(config) -> Audit:
     m = config["model"]
+    free = m.get("provider") != "anthropic"   # a local model costs nothing per token
     return Audit(
         config.path("audit", "path", STATE_DIR / "audit.log"),
-        float(m.get("input_usd_per_mtok", 0)),
-        float(m.get("output_usd_per_mtok", 0)),
+        0.0 if free else float(m.get("input_usd_per_mtok", 0)),
+        0.0 if free else float(m.get("output_usd_per_mtok", 0)),
     )

@@ -8,8 +8,13 @@ to run it.
 
 1. On GitHub, click the green **Code** button, then **Download ZIP**, and unzip it.
 2. Mac: double-click `start.command`. Windows: double-click `start.bat`. Linux: run `./start.sh`.
-3. The first time, it installs itself and asks you to paste your Anthropic API key
-   (from https://console.anthropic.com). Then Vyron starts. Type to talk, `/quit` to stop.
+3. The first time, it installs itself. The brain defaults to a **free local model** via
+   the Ollama app (https://ollama.com/download): the starter opens that page if Ollama isn't
+   installed, and downloads the model on first run. No key, no bill. Then Vyron starts.
+   Type to talk, `/quit` to stop.
+
+   Want the smarter paid brain instead? Set `provider = "anthropic"` in `config.toml`; the
+   starter will then ask for your Anthropic API key.
 
 For voice: double-click `start-voice.command` (Mac) or `start-voice.bat` (Windows). The
 first time it asks for your Deepgram and ElevenLabs keys. Then hold **right Ctrl**, speak, release.

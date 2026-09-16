@@ -183,10 +183,124 @@ def make_provider(config) -> ModelProvider:
     kind = os.environ.get("VYRON_PROVIDER") or section.get("provider", "anthropic")
     if kind == "fake":
         return FakeProvider()
+    if kind == "ollama":
+        return OllamaProvider(
+            model=section.get("ollama_model", "llama3.2"),
+            host=os.environ.get("OLLAMA_HOST") or section.get("ollama_host", "http://localhost:11434"),
+        )
     if kind == "anthropic":
         return AnthropicProvider(
             model=section.get("name", "claude-opus-5"),
             max_tokens=int(section.get("max_tokens", 4096)),
             effort=section.get("effort", "medium"),
         )
-    raise ProviderError(f"Unknown model provider {kind!r} in config.toml.")
+    raise ProviderError(f"Unknown model provider {kind!r} in config.toml (use anthropic, ollama or fake).")
+
+
+# --------------------------------------------------------------------------
+# Ollama: a free model running on this computer. No key, no bill.
+# --------------------------------------------------------------------------
+
+
+class OllamaProvider:
+    """Talks to a local Ollama server (http://localhost:11434) with streaming and tool calls."""
+
+    def __init__(self, model: str = "llama3.2", host: str = "http://localhost:11434", transport=None):
+        try:
+            import httpx
+        except ImportError as e:  # pragma: no cover
+            raise ProviderError("The 'httpx' package is not installed. Run: pip install httpx") from e
+        self._httpx = httpx
+        self._client = httpx.Client(base_url=host.rstrip("/"), timeout=httpx.Timeout(300, connect=5), transport=transport)
+        self.model = model
+        self.host = host
+
+    # -- format translation ------------------------------------------------
+
+    @staticmethod
+    def _to_ollama(system: str, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        names: dict[str, str] = {}
+        for m in messages:
+            content = m["content"]
+            if isinstance(content, str):
+                out.append({"role": m["role"], "content": content})
+                continue
+            if m["role"] == "assistant":
+                text = "".join(b.get("text", "") for b in content if b.get("type") == "text")
+                calls = []
+                for b in content:
+                    if b.get("type") == "tool_use":
+                        names[b["id"]] = b["name"]
+                        calls.append({"function": {"name": b["name"], "arguments": b["input"]}})
+                msg: dict[str, Any] = {"role": "assistant", "content": text}
+                if calls:
+                    msg["tool_calls"] = calls
+                out.append(msg)
+            else:
+                for b in content:
+                    if b.get("type") == "tool_result":
+                        out.append({"role": "tool", "content": str(b.get("content", "")),
+                                    "tool_name": names.get(b.get("tool_use_id", ""), "")})
+        return out
+
+    @staticmethod
+    def _tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return [{"type": "function", "function": {"name": t["name"], "description": t["description"],
+                                                  "parameters": t["input_schema"]}} for t in tools]
+
+    # -- the call ----------------------------------------------------------
+
+    def complete(self, system, messages, tools, on_text=None) -> ModelReply:
+        import json
+        import uuid
+
+        body: dict[str, Any] = {"model": self.model, "messages": self._to_ollama(system, messages), "stream": True}
+        if tools:
+            body["tools"] = self._tools(tools)
+        text_parts: list[str] = []
+        tool_calls: list[ToolCall] = []
+        usage = Usage()
+        try:
+            with self._client.stream("POST", "/api/chat", json=body) as r:
+                if r.status_code == 404:
+                    raise ProviderError(f"Ollama doesn't have the model {self.model!r}. Run: ollama pull {self.model}")
+                if r.status_code >= 400:
+                    r.read()
+                    raise ProviderError(f"Ollama returned an error ({r.status_code}): {r.text[:200]}")
+                for line in r.iter_lines():
+                    if not line.strip():
+                        continue
+                    chunk = json.loads(line)
+                    if chunk.get("error"):
+                        raise ProviderError(f"Ollama error: {chunk['error']}")
+                    msg = chunk.get("message", {})
+                    piece = msg.get("content", "")
+                    if piece:
+                        text_parts.append(piece)
+                        if on_text:
+                            on_text(piece)
+                    for call in msg.get("tool_calls", []) or []:
+                        fn = call.get("function", {})
+                        args = fn.get("arguments", {})
+                        if isinstance(args, str):
+                            try:
+                                args = json.loads(args)
+                            except json.JSONDecodeError:
+                                args = {}
+                        tool_calls.append(ToolCall(id=f"call_{uuid.uuid4().hex[:12]}", name=fn.get("name", ""), input=args))
+                    if chunk.get("done"):
+                        usage = Usage(int(chunk.get("prompt_eval_count", 0)), int(chunk.get("eval_count", 0)))
+        except self._httpx.ConnectError as e:
+            raise ProviderError(f"Ollama isn't running at {self.host}. Start the Ollama app (or run: ollama serve).") from e
+        except self._httpx.HTTPError as e:
+            raise ProviderError(f"Couldn't talk to Ollama ({type(e).__name__}).") from e
+
+        text = "".join(text_parts)
+        content: list[dict[str, Any]] = []
+        if text:
+            content.append({"type": "text", "text": text})
+        for tc in tool_calls:
+            content.append({"type": "tool_use", "id": tc.id, "name": tc.name, "input": tc.input})
+        return ModelReply(text=text, tool_calls=tool_calls, content=content,
+                          stop_reason="tool_use" if tool_calls else "end_turn", usage=usage)

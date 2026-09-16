@@ -29,14 +29,44 @@ if not exist .venv\installed.txt (
 )
 
 if not exist .env copy .env.example .env >nul
-findstr /b "ANTHROPIC_API_KEY=sk" .env >nul 2>&1
-if errorlevel 1 (
-  echo.
-  echo Vyron needs your Anthropic API key. Get one at https://console.anthropic.com
-  set /p KEY="Paste it here and press Enter: "
-  powershell -Command "(Get-Content .env) -replace '^ANTHROPIC_API_KEY=.*', 'ANTHROPIC_API_KEY=%KEY%' | Set-Content .env"
-  findstr /b "ANTHROPIC_API_KEY=" .env >nul || echo ANTHROPIC_API_KEY=%KEY%>> .env
-  echo Saved to .env, kept only on this computer.
+set PROVIDER=
+for /f "tokens=2 delims==" %%p in ('findstr /b "provider = " config.toml') do if not defined PROVIDER set PROVIDER=%%p
+set PROVIDER=%PROVIDER:"=%
+set PROVIDER=%PROVIDER: =%
+for /f "tokens=1 delims=#" %%p in ("%PROVIDER%") do set PROVIDER=%%p
+set PROVIDER=%PROVIDER: =%
+
+if "%PROVIDER%"=="anthropic" (
+  findstr /b "ANTHROPIC_API_KEY=sk" .env >nul 2>&1
+  if errorlevel 1 (
+    echo.
+    echo Vyron needs your Anthropic API key. Get one at https://console.anthropic.com
+    set /p KEY="Paste it here and press Enter: "
+    powershell -Command "(Get-Content .env) -replace '^ANTHROPIC_API_KEY=.*', 'ANTHROPIC_API_KEY=%KEY%' | Set-Content .env"
+    findstr /b "ANTHROPIC_API_KEY=" .env >nul || echo ANTHROPIC_API_KEY=%KEY%>> .env
+    echo Saved to .env, kept only on this computer.
+  )
+)
+
+if "%PROVIDER%"=="ollama" (
+  set MODEL=llama3.2
+  for /f "tokens=2 delims==" %%m in ('findstr /b "ollama_model = " config.toml') do for /f "tokens=1 delims=#" %%n in ("%%m") do set MODEL=%%n
+  set MODEL=%MODEL:"=%
+  set MODEL=%MODEL: =%
+  where ollama >nul 2>&1
+  if errorlevel 1 (
+    echo.
+    echo Vyron's free brain needs the Ollama app. Install it from https://ollama.com/download
+    echo then run this file again.
+    start https://ollama.com/download
+    pause
+    exit /b 1
+  )
+  ollama list | findstr /b /c:"%MODEL%" >nul 2>&1
+  if errorlevel 1 (
+    echo First run: downloading the free model %MODEL% ^(a few GB, one time^)...
+    ollama pull %MODEL%
+  )
 )
 
 if "%~1"=="--voice" (
