@@ -117,7 +117,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="vyron", description="Vyron, a voice-first personal assistant.")
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--voice", action="store_true", help="push-to-talk voice mode (needs the voice extras)")
+    parser.add_argument("--doctor", action="store_true", help="check keys, packages, APIs and audio devices, then exit")
     args = parser.parse_args(argv)
+    if args.doctor:
+        from .doctor import run_doctor
+        return run_doctor()
 
     load_env()
     config = load_config()

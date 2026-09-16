@@ -20,6 +20,7 @@ which is git-ignored and human-readable.
 ## Run
 
 ```bash
+python -m vyron --doctor           # first: tells you exactly what is missing on this machine
 python -m vyron                    # text mode
 python -m vyron --voice            # push-to-talk: hold the key in [voice] ptt_key, speak, release
 VYRON_PROVIDER=fake python -m vyron   # offline dry run with a scripted model, no API key needed
