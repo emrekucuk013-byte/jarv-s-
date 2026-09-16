@@ -22,7 +22,7 @@ ptt_key = "ctrl_r"              # pynput key name held to talk (e.g. ctrl_r, f8,
 sample_rate = 16000
 stt_model = "nova-3"            # Deepgram model
 stt_language = "en"
-tts_voice_id = "21m00Tcm4TlvDq8ikWAM"   # ElevenLabs voice id (default library voice; change to taste)
+tts_voice_id = "bfGb7JTLUnZebZRiFYyq"   # ElevenLabs voice id chosen by the user; change here, never in code
 tts_model_id = "eleven_turbo_v2_5"     # low-latency ElevenLabs model
 
 [memory]

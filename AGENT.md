@@ -50,7 +50,8 @@ waiting on my approval times out to "do nothing and leave a note".
 
 ## Interview defaults assumed
 
-Only the name was given. Everything else above is the default from the
+Only the name and the ElevenLabs voice id (`bfGb7JTLUnZebZRiFYyq`, in
+`config.toml`) were given. Everything else above is the default from the
 build brief.
 
 ## Build order
