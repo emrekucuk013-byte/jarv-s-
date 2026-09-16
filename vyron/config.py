@@ -57,6 +57,14 @@ class Config:
     def get(self, section: str, key: str, default: Any = None) -> Any:
         return self._data.get(section, {}).get(key, default)
 
+    def path(self, section: str, key: str, default: Path) -> Path:
+        """A path setting, resolved relative to the project root if not absolute."""
+        value = self.get(section, key)
+        if value is None:
+            return default
+        p = Path(value).expanduser()
+        return p if p.is_absolute() else ROOT / p
+
     @property
     def data(self) -> dict[str, Any]:
         return self._data

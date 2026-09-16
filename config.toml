@@ -13,3 +13,6 @@ effort = "medium"               # low | medium | high | xhigh | max
 # Approximate USD per million tokens, used only for the running cost tally.
 input_usd_per_mtok = 5.0
 output_usd_per_mtok = 25.0
+
+[notes]
+dir = "notes"                   # folder of .md / .txt files the assistant can search
