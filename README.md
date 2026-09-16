@@ -17,7 +17,7 @@ to run it.
    starter will then ask for your Anthropic API key.
 
 For voice: double-click `start-voice.command` (Mac) or `start-voice.bat` (Windows). The
-first time it asks for your Deepgram and ElevenLabs keys. Then hold **right Ctrl**, speak, release.
+first time it asks for your Deepgram and ElevenLabs keys. Then hold **Space**, speak, release.
 
 ## Setup (manual)
 

@@ -28,7 +28,7 @@ output_usd_per_mtok = 25.0
 dir = "notes"                   # folder of .md / .txt files the assistant can search
 
 [voice]
-ptt_key = "ctrl_r"              # pynput key name held to talk (e.g. ctrl_r, f8, space)
+ptt_key = "space"                # pynput key name held to talk (space, ctrl_r, f8, ...)
 sample_rate = 16000
 stt_model = "nova-3"            # Deepgram model
 stt_language = "en"
