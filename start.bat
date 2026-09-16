@@ -39,6 +39,27 @@ if errorlevel 1 (
   echo Saved to .env, kept only on this computer.
 )
 
+if "%~1"=="--voice" (
+  call :needkey DEEPGRAM_API_KEY "Deepgram key (https://console.deepgram.com, API Keys)"
+  call :needkey ELEVENLABS_API_KEY "ElevenLabs key (https://elevenlabs.io, profile menu, API Keys)"
+)
+
 python -m vyron %*
 echo.
 pause
+exit /b
+
+:needkey
+findstr /r /b "%~1=." .env >nul 2>&1
+if errorlevel 1 (
+  echo.
+  echo Voice needs your %~2
+  set /p KEY="Paste it here and press Enter: "
+  findstr /b "%~1=" .env >nul 2>&1
+  if errorlevel 1 (
+    echo %~1=%KEY%>> .env
+  ) else (
+    powershell -Command "(Get-Content .env) -replace '^%~1=.*', '%~1=%KEY%' | Set-Content .env"
+  )
+)
+exit /b

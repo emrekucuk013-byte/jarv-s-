@@ -23,6 +23,8 @@ def _sd():
         import sounddevice
     except ImportError as e:
         raise RuntimeError("Voice needs the audio extras: pip install 'vyron[voice]'") from e
+    except OSError as e:  # Linux without PortAudio; Mac/Windows wheels bundle it
+        raise RuntimeError("PortAudio is missing. On Debian/Ubuntu: sudo apt install libportaudio2") from e
     return sounddevice
 
 

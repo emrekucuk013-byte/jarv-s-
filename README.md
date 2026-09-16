@@ -11,8 +11,8 @@ to run it.
 3. The first time, it installs itself and asks you to paste your Anthropic API key
    (from https://console.anthropic.com). Then Vyron starts. Type to talk, `/quit` to stop.
 
-Later, for voice: add `DEEPGRAM_API_KEY` and `ELEVENLABS_API_KEY` to the `.env` file it
-created, and run `start.command --voice` / `start.bat --voice` from a terminal.
+For voice: double-click `start-voice.command` (Mac) or `start-voice.bat` (Windows). The
+first time it asks for your Deepgram and ElevenLabs keys. Then hold **right Ctrl**, speak, release.
 
 ## Setup (manual)
 
