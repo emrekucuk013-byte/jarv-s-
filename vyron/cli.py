@@ -11,7 +11,9 @@ from .config import load_config, load_env
 from .config import STATE_DIR
 from .heartbeat import Heartbeat, Inbox, Notice
 from .heartbeat.tools import notices_context, register as register_inbox_tools
+from .audit import default_audit
 from .memory import default_store, register_tools as register_memory_tools
+from .safety import ConsoleConfirmer, TimeoutConfirmer, default_kill_switch
 from .provider import ProviderError, make_provider
 from .tools import default_registry
 
@@ -27,7 +29,11 @@ def print_tool_event(event: dict) -> None:
     sys.stdout.write(f"{'':>2}")
 
 
-HELP = """Commands: /inbox  show held notices   /dismiss N|all  clear notices   /quit"""
+HELP = """Commands:
+  /inbox            show held notices        /dismiss N|all   clear notices
+  /pause            kill switch: stop all proactive behaviour (heartbeat and background actions)
+  /resume           release the kill switch  /audit [N]       last N audit entries
+  /cost             model spend this session /quit"""
 
 
 def show_inbox(inbox: Inbox) -> None:
@@ -52,6 +58,20 @@ def handle_command(user: str, rt: "Runtime") -> bool:
             print("dismissed" if rt.inbox.dismiss(int(arg)) else "no such notice")
         else:
             print("usage: /dismiss N | /dismiss all")
+    elif cmd == "/pause":
+        rt.kill_switch.engage()
+        rt.audit.log("kill_switch", engaged=True)
+        print("paused: the heartbeat and all background actions are stopped. You can still talk to me.")
+    elif cmd == "/resume":
+        rt.kill_switch.release()
+        rt.audit.log("kill_switch", engaged=False)
+        print("resumed: proactive behaviour is back on.")
+    elif cmd == "/audit":
+        n = int(arg) if arg.strip().isdigit() else 20
+        print("\n".join(rt.audit.tail(n)) or "(audit log is empty)")
+    elif cmd == "/cost":
+        t = rt.audit.session_tokens
+        print(f"this session: {t['input']} in / {t['output']} out tokens, about ${rt.audit.session_usd:.4f}")
     elif cmd == "/help":
         print(HELP)
     else:
@@ -68,9 +88,12 @@ def text_loop(rt: "Runtime") -> None:
         show_inbox(rt.inbox)
         for n in pending:
             rt.inbox.mark_announced(n)   # catch-up shown; nothing here gets announced twice
+    if rt.kill_switch.engaged:
+        print("(kill switch is engaged: proactive behaviour is paused. /resume to release)")
     while True:
         count = len(rt.inbox.pending())
         badge = f" ({count} notice{'s' if count != 1 else ''}, /inbox)" if count else ""
+        badge += " [paused]" if rt.kill_switch.engaged else ""
         try:
             user = input(f"\nyou{badge}> ").strip()
         except (EOFError, KeyboardInterrupt):
@@ -117,38 +140,51 @@ def main(argv: list[str] | None = None) -> int:
 
 
 class Runtime:
-    """Everything a front end needs: the one shared agent, the inbox, and the heartbeat."""
+    """Everything a front end needs: the one shared agent, the inbox, the heartbeat, and the rails."""
 
-    def __init__(self, config, agent: Agent, inbox: Inbox, heartbeat: Heartbeat, new_agent):
-        self.config, self.agent, self.inbox, self.heartbeat, self.new_agent = config, agent, inbox, heartbeat, new_agent
+    def __init__(self, config, agent: Agent, inbox: Inbox, heartbeat: Heartbeat, new_agent, audit, kill_switch):
+        self.config, self.agent, self.inbox, self.heartbeat = config, agent, inbox, heartbeat
+        self.new_agent, self.audit, self.kill_switch = new_agent, audit, kill_switch
 
 
-def build_runtime(config, provider) -> Runtime:
-    """The one place the shared agent core is assembled: tools, memory, notices, heartbeat."""
+def build_runtime(config, provider, confirmer=None) -> Runtime:
+    """The one place the shared agent core is assembled: tools, memory, notices, heartbeat, rails."""
     memory = default_store(config)
     inbox = Inbox(config.path("heartbeat", "inbox", STATE_DIR / "inbox.json"))
+    audit = default_audit(config)
+    kill_switch = default_kill_switch(config)
     limit = int(config.get("memory", "max_facts_in_prompt", 40))
+    confirmer = confirmer or ConsoleConfirmer()
 
-    def new_agent() -> Agent:
+    def new_agent(source: str = "chat", who_confirms=None) -> Agent:
         registry = default_registry(config)
         register_memory_tools(registry, memory)
         register_inbox_tools(registry, inbox)
-        agent = Agent(config, provider, registry)
+        agent = Agent(config, provider, registry, confirmer=who_confirms or confirmer, audit=audit, source=source)
         agent.context_providers.append(lambda user_text: memory.prompt_block(user_text, limit))
         agent.context_providers.append(notices_context(inbox))
         return agent
 
+    # Unattended turns never block forever: wait a bounded time, then do nothing and leave a note.
+    background_confirmer = TimeoutConfirmer(
+        timeout=float(config.get("safety", "background_confirm_timeout", 0)),
+        note=lambda text: inbox.add("approval", "log", text),
+    )
+
     def run_background_turn(prompt: str) -> str:
-        # A heartbeat-initiated turn: same brain and tools, fresh short-term history.
-        result = new_agent().run_turn(prompt)
+        if kill_switch.engaged:
+            return ""
+        result = new_agent("heartbeat", background_confirmer).run_turn(prompt)
         return result.text if not result.error else ""
 
-    heartbeat = Heartbeat(config, inbox, run_agent=run_background_turn)
-    return Runtime(config, new_agent(), inbox, heartbeat, new_agent)
+    heartbeat = Heartbeat(config, inbox, run_agent=run_background_turn, is_paused=lambda: kill_switch.engaged,
+                          audit=lambda kind, data: audit.log(kind, source="heartbeat", **data))
+    return Runtime(config, new_agent(), inbox, heartbeat, new_agent, audit, kill_switch)
 
 
 def voice_mode(rt: Runtime, config) -> int:
     agent = rt.agent
+    agent.source = "voice"
     from .config import secret
     from .voice.audio import Recorder, SoundDevicePlayer
     from .voice.session import VoiceSession, run_push_to_talk

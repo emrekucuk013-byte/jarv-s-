@@ -57,4 +57,11 @@ build brief.
 
 Tier 1 text brain → Tier 2 tools → Tier 3 voice → Tier 4 memory →
 Tier 5 heartbeat → Tier 6 rails. Each tier is runnable and verified before
-the next starts.
+the next starts. All six are built; `README.md` has the run and hand
+verification steps, and `tests/` has one file per tier.
+
+## Where things live
+
+- Settings: `config.toml`. Secrets: `.env`. Runtime state: `state/`.
+- Shared core assembly: `build_runtime` in `vyron/cli.py`.
+- New capability = one tool module + one line in `default_registry`.

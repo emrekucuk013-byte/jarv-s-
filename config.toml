@@ -59,3 +59,14 @@ every = "12h"
 level = "log"
 enabled = false                 # flip on once you trust it; costs one model call per run
 prompt = "Look at the user's reminders for today with list_reminders and say whether anything needs attention."
+
+[safety]
+# Tools that always stop for your explicit yes, in addition to those flagged consequential in code.
+require_confirmation = ["send_message", "remove_reminder", "forget"]
+# Seconds a heartbeat-started action waits for your approval before defaulting to "do nothing, leave a note".
+background_confirm_timeout = 0
+flag_injected_instructions = true   # wrap tool output that looks like it's giving orders
+pause_file = "state/PAUSED"         # kill switch: /pause creates it, /resume removes it, or touch it by hand
+
+[audit]
+path = "state/audit.log"            # one JSON line per model call, tool run, confirmation, and notice

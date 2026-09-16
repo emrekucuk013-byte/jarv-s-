@@ -32,7 +32,7 @@ class Heartbeat:
 
     def __init__(self, config, inbox: Inbox, announce: Callable[[Notice], None] | None = None,
                  run_agent: Callable[[str], str] | None = None, clock: Callable[[], datetime] = datetime.now,
-                 audit: Callable[[str, dict], None] | None = None):
+                 audit: Callable[[str, dict], None] | None = None, is_paused: Callable[[], bool] | None = None):
         hb = config["heartbeat"]
         self.config = config
         self.inbox = inbox
@@ -52,7 +52,7 @@ class Heartbeat:
         self._running: set[str] = set()
         self._lock = threading.Lock()
         self._stop = threading.Event()
-        self.paused = False   # the kill switch (Tier 6) flips this
+        self._is_paused = is_paused or (lambda: False)   # the kill switch
         self._thread: threading.Thread | None = None
 
     # -- lifecycle ---------------------------------------------------------
@@ -76,6 +76,10 @@ class Heartbeat:
 
     # -- one tick ---------------------------------------------------------
 
+    @property
+    def paused(self) -> bool:
+        return self._is_paused()
+
     def tick(self) -> None:
         now = self.clock()
         if not self.paused:
@@ -90,7 +94,7 @@ class Heartbeat:
                         continue
                     self._running.add(name)
                 threading.Thread(target=self._run_check, args=(spec, now), daemon=True).start()
-        self.deliver(now)
+            self.deliver(now)
 
     def _run_check(self, spec: dict[str, Any], now: datetime) -> None:
         name = spec["name"]
