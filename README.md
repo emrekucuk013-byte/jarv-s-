@@ -4,7 +4,17 @@ A voice-first personal assistant harness: one shared agent core, many ways in
 and out. Read [`AGENT.md`](AGENT.md) for what it is and why; this file is how
 to run it.
 
-## Setup
+## Easiest start (no terminal knowledge needed)
+
+1. On GitHub, click the green **Code** button, then **Download ZIP**, and unzip it.
+2. Mac: double-click `start.command`. Windows: double-click `start.bat`. Linux: run `./start.sh`.
+3. The first time, it installs itself and asks you to paste your Anthropic API key
+   (from https://console.anthropic.com). Then Vyron starts. Type to talk, `/quit` to stop.
+
+Later, for voice: add `DEEPGRAM_API_KEY` and `ELEVENLABS_API_KEY` to the `.env` file it
+created, and run `start.command --voice` / `start.bat --voice` from a terminal.
+
+## Setup (manual)
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
