@@ -120,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--doctor", action="store_true", help="check keys, packages, APIs and audio devices, then exit")
     parser.add_argument("--serve", action="store_true", help="serve the HUD page to phones/tablets on your Wi-Fi")
     parser.add_argument("--port", type=int, default=None, help="port for --serve (default from config.toml [web])")
+    parser.add_argument("--no-open", action="store_true", help="with --serve: don't open the HUD in this computer's browser")
     args = parser.parse_args(argv)
     if args.doctor:
         from .doctor import run_doctor
@@ -139,7 +140,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.serve:
             from .web.server import serve
-            return serve(rt, config, port=args.port)
+            return serve(rt, config, port=args.port, open_browser=not args.no_open)
         if args.voice:
             return voice_mode(rt, config)
         text_loop(rt)

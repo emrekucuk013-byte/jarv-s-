@@ -245,12 +245,31 @@ def lan_addresses() -> list[str]:
     return names
 
 
-def serve(rt, config, port: int | None = None, use_https: bool | None = None) -> int:
+def open_in_browser(url: str) -> None:
+    import platform
+    import webbrowser
+    try:
+        if platform.system() == "Darwin":
+            subprocess.Popen(["open", url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            webbrowser.open(url)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def serve(rt, config, port: int | None = None, use_https: bool | None = None, open_browser: bool = True) -> int:
     app = WebApp(rt, config)
     port = int(port or config.get("web", "port", 8080))
     use_https = config.get("web", "https", True) if use_https is None else use_https
-    httpd = ThreadingHTTPServer(("0.0.0.0", port), make_handler(app))
+    handler = make_handler(app)
+    httpd = ThreadingHTTPServer(("0.0.0.0", port), handler)
     httpd.daemon_threads = True
+    # A plain-http listener on this computer only: localhost counts as secure, so the
+    # microphone works here with no certificate warning. Other devices use the https port.
+    local_port = int(config.get("web", "local_port", port + 1))
+    local = ThreadingHTTPServer(("127.0.0.1", local_port), handler)
+    local.daemon_threads = True
+    threading.Thread(target=local.serve_forever, daemon=True).start()
     scheme = "http"
     if use_https:
         pair = ensure_cert(config.path("web", "cert_dir", STATE_DIR))
@@ -261,16 +280,22 @@ def serve(rt, config, port: int | None = None, use_https: bool | None = None) ->
             scheme = "https"
         else:
             print("Couldn't create a certificate (openssl missing); serving plain http. Microphones in browsers need https.")
-    print(f"\n{rt.agent.name} is serving the HUD. On your phone or tablet (same Wi-Fi), open:")
+    here = f"http://localhost:{local_port}"
+    print(f"\n{rt.agent.name} HUD")
+    print(f"   on this computer:            {here}")
+    print("   on a phone/tablet (same Wi-Fi):")
     for a in lan_addresses():
-        print(f"   {scheme}://{a}:{port}")
+        print(f"      {scheme}://{a}:{port}")
     if scheme == "https":
-        print("The browser will warn that the certificate isn't trusted (it's self-made). Choose 'Show details' / 'Visit anyway' once.")
-    print("Ctrl-C to stop.\n")
+        print("   (phones will warn once that the certificate is self-made: choose 'Show details' / 'Visit anyway')")
+    print("Keep this window open. Ctrl-C to stop.\n")
+    if open_browser:
+        open_in_browser(here)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
         httpd.server_close()
+        local.server_close()
     return 0

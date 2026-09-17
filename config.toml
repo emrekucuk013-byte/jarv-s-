@@ -86,4 +86,5 @@ path = "state/audit.log"            # one JSON line per model call, tool run, co
 [web]
 port = 8080                     # python -m vyron --serve  ->  https://<this-computer>.local:8080 from a phone or tablet
 https = true                    # browsers only allow the microphone over https; a self-made certificate is created once
+local_port = 8081               # plain http for this computer's own browser (localhost needs no certificate)
 confirm_timeout = 90            # seconds a browser turn waits for your yes/no before defaulting to no
