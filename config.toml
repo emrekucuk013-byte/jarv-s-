@@ -65,6 +65,16 @@ path = "state/trigger.txt"      # touch or edit this file to trigger a notice on
 level = "log"
 
 [[heartbeat.checks]]
+name = "gmail"
+check = "gmail"
+every = "3m"
+level = "interrupt"             # also pushed to your phone when [notify] is set up
+senders = []                    # e.g. ["boss@company.com", "Anna"] -> always worth an interruption
+keywords = []                   # e.g. ["invoice", "urgent"]
+judge = true                    # let the brain decide for everything else (one model call per new mail)
+# Runs only when GMAIL_USER and GMAIL_APP_PASSWORD are in .env.
+
+[[heartbeat.checks]]
 name = "morning_lookahead"
 check = "ask_agent"
 every = "12h"
@@ -88,3 +98,10 @@ port = 8080                     # python -m vyron --serve  ->  https://<this-com
 https = true                    # browsers only allow the microphone over https; a self-made certificate is created once
 local_port = 8081               # plain http for this computer's own browser (localhost needs no certificate)
 confirm_timeout = 90            # seconds a browser turn waits for your yes/no before defaulting to no
+
+[gmail]
+state = "state/gmail.json"      # remembers the last seen mail so restarts don't re-announce
+
+[notify]
+ntfy_topic = ""                 # or NTFY_TOPIC in .env: install the ntfy app on your phone and subscribe to this topic
+ntfy_server = "https://ntfy.sh"

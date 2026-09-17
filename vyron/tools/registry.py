@@ -101,10 +101,11 @@ class ToolRegistry:
 
 def default_registry(config) -> ToolRegistry:
     """Build the registry with every built-in tool. New tools: add one line here."""
-    from . import drafts, notes, reminders
+    from . import drafts, gmail, notes, reminders
 
     registry = ToolRegistry()
     reminders.register(registry, config)
     notes.register(registry, config)
     drafts.register(registry, config)
+    gmail.register(registry, config)   # only registers when GMAIL_USER / GMAIL_APP_PASSWORD are set
     return registry

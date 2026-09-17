@@ -13,6 +13,7 @@ from .heartbeat import Heartbeat, Inbox, Notice
 from .heartbeat.tools import notices_context, register as register_inbox_tools
 from .audit import default_audit
 from .memory import default_store, register_tools as register_memory_tools
+from .notify import notifier_from_env
 from .safety import ConsoleConfirmer, TimeoutConfirmer, default_kill_switch
 from .provider import ProviderError, make_provider
 from .tools import default_registry
@@ -134,7 +135,13 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Can't start: {e}", file=sys.stderr)
         return 2
     rt = build_runtime(config, provider)
-    rt.heartbeat.announce = lambda n: print(f"\n[{rt.agent.name}] {n.text}\nyou> ", end="", flush=True)
+    push = rt.heartbeat.announce
+
+    def announce_console(n):
+        print(f"\n[{rt.agent.name}] {n.text}\nyou> ", end="", flush=True)
+        if push:
+            push(n)
+    rt.heartbeat.announce = announce_console
     if config.get("heartbeat", "enabled", True):
         rt.heartbeat.start()
     try:
@@ -187,9 +194,22 @@ def build_runtime(config, provider, confirmer=None) -> Runtime:
         result = new_agent("heartbeat", background_confirmer).run_turn(prompt)
         return result.text if not result.error else ""
 
+    from .config import secret
+    if not (secret("GMAIL_USER") and secret("GMAIL_APP_PASSWORD")):
+        # No Gmail credentials: drop the gmail check so it doesn't fail every run.
+        config["heartbeat"]["checks"] = [c for c in config["heartbeat"].get("checks", []) if c.get("check") != "gmail"]
     heartbeat = Heartbeat(config, inbox, run_agent=run_background_turn, is_paused=lambda: kill_switch.engaged,
                           audit=lambda kind, data: audit.log(kind, source="heartbeat", **data))
-    return Runtime(config, new_agent(), inbox, heartbeat, new_agent, audit, kill_switch)
+    # Phone notifications: interrupt-level notices also go to ntfy when a topic is set.
+    notifier = notifier_from_env(config)
+    if notifier:
+        def announce(n: Notice):
+            ok = notifier.send(config["assistant"]["name"], n.text, "high" if n.level == "critical" else "default")
+            audit.log("push", source="heartbeat", ok=ok, text=n.text)
+        heartbeat.announce = announce
+    rt = Runtime(config, new_agent(), inbox, heartbeat, new_agent, audit, kill_switch)
+    rt.notifier = notifier
+    return rt
 
 
 def voice_mode(rt: Runtime, config) -> int:
@@ -217,7 +237,7 @@ def voice_mode(rt: Runtime, config) -> int:
     speech = SpeechQueue(speaker, on_error=lambda e: print(f"\n(speech failed: {e})"))
     transcriber = DeepgramTranscriber(dg, v.get("stt_model", "nova-3"), v.get("stt_language", "en"))
     session = VoiceSession(agent, transcriber, speech, Recorder(rate))
-    rt.heartbeat.announce = lambda n: (print(f"\n[{agent.name}] {n.text}"), speech.say(n.text))
+    rt.heartbeat.announce = lambda n: (print(f"\n[{agent.name}] {n.text}"), speech.say(n.text), push and push(n))
     for n in rt.inbox.pending():
         print("  " + n.line())
         rt.inbox.mark_announced(n)

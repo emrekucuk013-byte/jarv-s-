@@ -27,6 +27,18 @@ address like `https://your-mac.local:8080` for an iPad or phone on the same Wi-F
 one-time certificate warning there). The brain, memory and reminders all live on the
 computer; the browser is just the face. Also: `python -m vyron --serve`.
 
+### Watching Gmail and pinging your phone (optional)
+
+The launchers ask for these once; press Enter to skip any of them.
+
+- **Gmail (read-only):** your Gmail address and a Google *app password* from
+  https://myaccount.google.com/apppasswords (needs 2-step verification on the account).
+  The heartbeat then checks for new mail every few minutes and surfaces only what matters:
+  watched senders, keywords, or the brain's judgment. Tune it in `config.toml`, the `gmail` check.
+- **Phone notifications:** install the free **ntfy** app (iOS/Android), subscribe to a topic name you
+  invent (e.g. `vyron-emre-8231`), and give Vyron the same name. Interrupt-level notices then reach
+  your lock screen, on any network.
+
 ## Setup (manual)
 
 ```bash

@@ -67,7 +67,7 @@ if [ "$PROVIDER" = "ollama" ]; then
 fi
 
 if [ "$1" = "--voice" ] || [ "$1" = "--serve" ]; then
-  for VAR in DEEPGRAM_API_KEY ELEVENLABS_API_KEY; do
+  for VAR in DEEPGRAM_API_KEY ELEVENLABS_API_KEY GMAIL_USER GMAIL_APP_PASSWORD NTFY_TOPIC; do
     if ! grep -q "^$VAR=.\+" .env 2>/dev/null; then
       echo
       case $VAR in
@@ -75,9 +75,14 @@ if [ "$1" = "--voice" ] || [ "$1" = "--serve" ]; then
                           [ "$1" = "--serve" ] && echo "Press Enter to skip and use the phone's own speech recognition instead.";;
         ELEVENLABS_API_KEY) echo "Optional: your ElevenLabs API key (https://elevenlabs.io, profile menu, API Keys) for a natural voice."
                             echo "Press Enter to skip and use this computer's built-in voice instead.";;
+        GMAIL_USER) echo "Optional: your Gmail address, so Vyron can watch for important mail (read-only). Enter to skip.";;
+        GMAIL_APP_PASSWORD) grep -q '^GMAIL_USER=skip' .env && { echo "GMAIL_APP_PASSWORD=skip" >> .env; continue; }
+                            echo "Your Google app password (16 letters, from https://myaccount.google.com/apppasswords). Enter to skip.";;
+        NTFY_TOPIC) echo "Optional: phone notifications. Install the 'ntfy' app on your phone, subscribe to a topic name you invent"
+                    echo "(e.g. vyron-emre-8231), and type that same name here. Enter to skip.";;
       esac
       read -r -p "Paste it here and press Enter: " KEY
-      if [ -z "$KEY" ] && { [ "$VAR" = "ELEVENLABS_API_KEY" ] || [ "$1" = "--serve" ]; }; then echo "Skipped."; echo "$VAR=skip" >> .env; continue; fi
+      if [ -z "$KEY" ] && { [ "$VAR" != "DEEPGRAM_API_KEY" ] || [ "$1" = "--serve" ]; }; then echo "Skipped."; echo "$VAR=skip" >> .env; continue; fi
       if grep -q "^$VAR=" .env; then
         sed -i.bak "s|^$VAR=.*|$VAR=$KEY|" .env && rm -f .env.bak
       else
