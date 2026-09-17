@@ -71,7 +71,7 @@ if "%PROVIDER%"=="ollama" (
 
 if "%~1"=="--voice" (
   call :needkey DEEPGRAM_API_KEY "Deepgram key (https://console.deepgram.com, API Keys)"
-  call :needkey ELEVENLABS_API_KEY "ElevenLabs key (https://elevenlabs.io, profile menu, API Keys)"
+  call :needkey ELEVENLABS_API_KEY "ElevenLabs API key (optional; press Enter to skip and use Windows' built-in voice)"
 )
 
 python -m vyron %*

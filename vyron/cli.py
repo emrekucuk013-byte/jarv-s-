@@ -193,16 +193,21 @@ def voice_mode(rt: Runtime, config) -> int:
     from .voice.audio import Recorder, SoundDevicePlayer
     from .voice.session import VoiceSession, run_push_to_talk
     from .voice.stt import DeepgramTranscriber
-    from .voice.tts import ElevenLabsSpeaker, SpeechQueue
+    from .voice.tts import ElevenLabsSpeaker, SpeechQueue, SystemSpeaker
 
     v = config["voice"]
     dg, el = secret("DEEPGRAM_API_KEY"), secret("ELEVENLABS_API_KEY")
-    if not dg or not el:
-        print("Voice mode needs DEEPGRAM_API_KEY and ELEVENLABS_API_KEY in .env.", file=sys.stderr)
+    if not dg:
+        print("Voice mode needs DEEPGRAM_API_KEY in .env (free at https://console.deepgram.com).", file=sys.stderr)
         return 2
     rate = int(v.get("sample_rate", 16000))
     player = SoundDevicePlayer(rate)
-    speaker = ElevenLabsSpeaker(el, v["tts_voice_id"], player, v.get("tts_model_id", "eleven_turbo_v2_5"))
+    if el and v.get("tts_provider", "elevenlabs") == "elevenlabs":
+        speaker = ElevenLabsSpeaker(el, v["tts_voice_id"], player, v.get("tts_model_id", "eleven_turbo_v2_5"))
+        print("Voice: ElevenLabs.")
+    else:
+        speaker = SystemSpeaker(v.get("system_voice") or None, int(v["system_rate"]) if v.get("system_rate") else None)
+        print("Voice: this computer's built-in voice (no ElevenLabs key set; add one to .env for a nicer voice).")
     speech = SpeechQueue(speaker, on_error=lambda e: print(f"\n(speech failed: {e})"))
     transcriber = DeepgramTranscriber(dg, v.get("stt_model", "nova-3"), v.get("stt_language", "en"))
     session = VoiceSession(agent, transcriber, speech, Recorder(rate))

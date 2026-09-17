@@ -72,9 +72,11 @@ if [ "$1" = "--voice" ]; then
       echo
       case $VAR in
         DEEPGRAM_API_KEY) echo "Voice needs your Deepgram key (https://console.deepgram.com, API Keys).";;
-        ELEVENLABS_API_KEY) echo "Voice needs your ElevenLabs key (https://elevenlabs.io, profile menu, API Keys).";;
+        ELEVENLABS_API_KEY) echo "Optional: your ElevenLabs API key (https://elevenlabs.io, profile menu, API Keys) for a natural voice."
+                            echo "Press Enter to skip and use this computer's built-in voice instead.";;
       esac
       read -r -p "Paste it here and press Enter: " KEY
+      if [ -z "$KEY" ] && [ "$VAR" = "ELEVENLABS_API_KEY" ]; then echo "Skipped: using the built-in voice."; echo "$VAR=skip" >> .env; continue; fi
       if grep -q "^$VAR=" .env; then
         sed -i.bak "s|^$VAR=.*|$VAR=$KEY|" .env && rm -f .env.bak
       else

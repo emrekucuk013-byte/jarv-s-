@@ -97,4 +97,4 @@ def load_env(path: Path = ENV_PATH) -> None:
 def secret(name: str) -> str | None:
     """Read a secret from the environment. Returns None if unset or blank."""
     value = os.environ.get(name, "").strip()
-    return value or None
+    return None if value.lower() in {"", "skip", "none"} else value

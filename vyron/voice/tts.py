@@ -108,3 +108,54 @@ class SpeechQueue:
             finally:
                 if self._q.empty():
                     self._idle.set()
+
+
+class SystemSpeaker:
+    """The operating system's built-in voice. No key, no network; less natural than ElevenLabs.
+
+    Mac: `say`. Linux: `espeak` (or `spd-say`). Windows: PowerShell's SAPI voice.
+    """
+
+    def __init__(self, voice: str | None = None, rate: int | None = None):
+        import platform
+        self.os = platform.system()
+        self.voice = voice
+        self.rate = rate
+        self._proc = None
+
+    def _command(self, text: str) -> list[str]:
+        if self.os == "Darwin":
+            cmd = ["say"]
+            if self.voice: cmd += ["-v", self.voice]
+            if self.rate: cmd += ["-r", str(self.rate)]
+            return cmd + [text]
+        if self.os == "Windows":
+            safe = text.replace("'", "''")
+            return ["powershell", "-NoProfile", "-Command",
+                    f"Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Speak('{safe}')"]
+        import shutil
+        if shutil.which("espeak"):
+            return ["espeak", text]
+        if shutil.which("spd-say"):
+            return ["spd-say", "-w", text]
+        raise SpeakError("No system voice found. Install espeak, or set an ElevenLabs key.")
+
+    def speak(self, text: str) -> None:
+        import subprocess
+        if not text.strip():
+            return
+        try:
+            self._proc = subprocess.Popen(self._command(text), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self._proc.wait()
+        except FileNotFoundError as e:
+            raise SpeakError("The system voice command isn't available on this machine.") from e
+        finally:
+            self._proc = None
+
+    def stop(self) -> None:
+        p = self._proc
+        if p and p.poll() is None:
+            try:
+                p.terminate()
+            except OSError:
+                pass
