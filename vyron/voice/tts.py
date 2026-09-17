@@ -58,6 +58,20 @@ class ElevenLabsSpeaker:
     def stop(self) -> None:
         self.player.stop()
 
+    def synthesize(self, text: str, output_format: str = "mp3_44100_64") -> bytes:
+        """Whole clip as bytes, for playback somewhere else (e.g. a phone's browser)."""
+        import httpx
+
+        url = self.URL.format(voice_id=self.voice_id).replace("/stream", "")
+        try:
+            r = self._client.post(url, params={"output_format": output_format}, headers=self._headers,
+                                  json={"text": text, "model_id": self.model_id})
+            if r.status_code >= 400:
+                raise SpeakError(f"ElevenLabs returned {r.status_code}.")
+            return r.content
+        except httpx.HTTPError as e:
+            raise SpeakError("Couldn't reach ElevenLabs.") from e
+
 
 class SpeechQueue:
     """Speaks sentences in order on a background thread; ``cancel`` drops the rest and cuts the current one."""

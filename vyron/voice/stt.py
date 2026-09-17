@@ -30,11 +30,12 @@ class DeepgramTranscriber:
         self._headers = {"Authorization": f"Token {api_key}", "Content-Type": "audio/wav"}
         self._params = {"model": model, "language": language, "smart_format": "true"}
 
-    def transcribe(self, wav_bytes: bytes) -> str:
+    def transcribe(self, wav_bytes: bytes, content_type: str = "audio/wav") -> str:
         import httpx
 
+        headers = {**self._headers, "Content-Type": content_type or "audio/wav"}
         try:
-            r = self._client.post(self.URL, params=self._params, headers=self._headers, content=wav_bytes)
+            r = self._client.post(self.URL, params=self._params, headers=headers, content=wav_bytes)
             r.raise_for_status()
         except httpx.HTTPStatusError as e:
             raise TranscribeError(f"Deepgram returned {e.response.status_code}.") from e

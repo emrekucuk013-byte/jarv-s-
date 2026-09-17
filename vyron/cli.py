@@ -118,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument("--voice", action="store_true", help="push-to-talk voice mode (needs the voice extras)")
     parser.add_argument("--doctor", action="store_true", help="check keys, packages, APIs and audio devices, then exit")
+    parser.add_argument("--serve", action="store_true", help="serve the HUD page to phones/tablets on your Wi-Fi")
+    parser.add_argument("--port", type=int, default=None, help="port for --serve (default from config.toml [web])")
     args = parser.parse_args(argv)
     if args.doctor:
         from .doctor import run_doctor
@@ -135,6 +137,9 @@ def main(argv: list[str] | None = None) -> int:
     if config.get("heartbeat", "enabled", True):
         rt.heartbeat.start()
     try:
+        if args.serve:
+            from .web.server import serve
+            return serve(rt, config, port=args.port)
         if args.voice:
             return voice_mode(rt, config)
         text_loop(rt)

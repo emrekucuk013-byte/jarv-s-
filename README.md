@@ -19,6 +19,13 @@ to run it.
 For voice: double-click `start-voice.command` (Mac) or `start-voice.bat` (Windows). The
 first time it asks for your Deepgram and ElevenLabs keys. Then hold **Space**, speak, release.
 
+### From a phone or tablet (iPad, iPhone, Android)
+
+Double-click `start-web.command` (Mac) or `start-web.bat` (Windows). It prints an address
+like `https://your-mac.local:8080`. Open it in the phone's browser on the same Wi-Fi, accept
+the one-time certificate warning, and hold the button to talk. The brain, memory and
+reminders all live on the computer; the phone is just the face. Also: `python -m vyron --serve`.
+
 ## Setup (manual)
 
 ```bash

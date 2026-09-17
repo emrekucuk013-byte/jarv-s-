@@ -66,17 +66,18 @@ if [ "$PROVIDER" = "ollama" ]; then
   fi
 fi
 
-if [ "$1" = "--voice" ]; then
+if [ "$1" = "--voice" ] || [ "$1" = "--serve" ]; then
   for VAR in DEEPGRAM_API_KEY ELEVENLABS_API_KEY; do
     if ! grep -q "^$VAR=.\+" .env 2>/dev/null; then
       echo
       case $VAR in
-        DEEPGRAM_API_KEY) echo "Voice needs your Deepgram key (https://console.deepgram.com, API Keys).";;
+        DEEPGRAM_API_KEY) echo "Your Deepgram key (https://console.deepgram.com, API Keys; free) for accurate hearing."
+                          [ "$1" = "--serve" ] && echo "Press Enter to skip and use the phone's own speech recognition instead.";;
         ELEVENLABS_API_KEY) echo "Optional: your ElevenLabs API key (https://elevenlabs.io, profile menu, API Keys) for a natural voice."
                             echo "Press Enter to skip and use this computer's built-in voice instead.";;
       esac
       read -r -p "Paste it here and press Enter: " KEY
-      if [ -z "$KEY" ] && [ "$VAR" = "ELEVENLABS_API_KEY" ]; then echo "Skipped: using the built-in voice."; echo "$VAR=skip" >> .env; continue; fi
+      if [ -z "$KEY" ] && { [ "$VAR" = "ELEVENLABS_API_KEY" ] || [ "$1" = "--serve" ]; }; then echo "Skipped."; echo "$VAR=skip" >> .env; continue; fi
       if grep -q "^$VAR=" .env; then
         sed -i.bak "s|^$VAR=.*|$VAR=$KEY|" .env && rm -f .env.bak
       else
