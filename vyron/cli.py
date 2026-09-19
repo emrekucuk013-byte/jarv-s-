@@ -195,7 +195,7 @@ def build_runtime(config, provider, confirmer=None) -> Runtime:
         return result.text if not result.error else ""
 
     from .config import secret
-    if not (secret("GMAIL_USER") and secret("GMAIL_APP_PASSWORD")):
+    if not ((secret("GMAIL_USER") or config.get("gmail", "user")) and secret("GMAIL_APP_PASSWORD")):
         # No Gmail credentials: drop the gmail check so it doesn't fail every run.
         config["heartbeat"]["checks"] = [c for c in config["heartbeat"].get("checks", []) if c.get("check") != "gmail"]
     heartbeat = Heartbeat(config, inbox, run_agent=run_background_turn, is_paused=lambda: kill_switch.engaged,

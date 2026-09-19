@@ -112,9 +112,9 @@ def gmail_new(settings, ctx) -> list[Finding]:
     from ..tools.gmail import client_from_env
     from ..tools._store import read_json, write_json
 
-    client = settings.get("_client") or client_from_env()
+    client = settings.get("_client") or client_from_env(ctx.config)
     if client is None:
-        raise RuntimeError("Gmail isn't set up: GMAIL_USER and GMAIL_APP_PASSWORD are missing from .env")
+        raise RuntimeError("Gmail isn't set up: GMAIL_APP_PASSWORD is missing from .env (and the address from config.toml [gmail] user or GMAIL_USER)")
     state_path = ctx.config.path("gmail", "state", STATE_DIR / "gmail.json")
     state = read_json(state_path, {})
     last_uid = int(state.get("last_uid", 0))

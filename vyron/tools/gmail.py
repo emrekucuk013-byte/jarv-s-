@@ -112,13 +112,14 @@ def _line(e: dict[str, Any]) -> str:
     return f"#{e['uid']} {e['date'][:22]} | {e['from'][:40]} | {e['subject'][:80]}"
 
 
-def client_from_env() -> GmailClient | None:
-    user, pw = secret("GMAIL_USER"), secret("GMAIL_APP_PASSWORD")
+def client_from_env(config=None) -> GmailClient | None:
+    user = secret("GMAIL_USER") or (config.get("gmail", "user", "") if config else "")
+    pw = secret("GMAIL_APP_PASSWORD")
     return GmailClient(user, pw) if user and pw else None
 
 
 def register(registry, config, client: GmailClient | None = None) -> None:
-    client = client or client_from_env()
+    client = client or client_from_env(config)
     if client is None:
         return
 

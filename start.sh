@@ -75,9 +75,11 @@ if [ "$1" = "--voice" ] || [ "$1" = "--serve" ]; then
                           [ "$1" = "--serve" ] && echo "Press Enter to skip and use the phone's own speech recognition instead.";;
         ELEVENLABS_API_KEY) echo "Optional: your ElevenLabs API key (https://elevenlabs.io, profile menu, API Keys) for a natural voice."
                             echo "Press Enter to skip and use this computer's built-in voice instead.";;
-        GMAIL_USER) echo "Optional: your Gmail address, so Vyron can watch for important mail (read-only). Enter to skip.";;
-        GMAIL_APP_PASSWORD) grep -q '^GMAIL_USER=skip' .env && { echo "GMAIL_APP_PASSWORD=skip" >> .env; continue; }
-                            echo "Your Google app password (16 letters, from https://myaccount.google.com/apppasswords). Enter to skip.";;
+        GMAIL_USER) if grep -q '^user = "[^"]\+"' config.toml; then echo "GMAIL_USER=skip" >> .env; continue; fi
+                    echo "Optional: your Gmail address, so Vyron can watch for important mail (read-only). Enter to skip.";;
+        GMAIL_APP_PASSWORD) if grep -q '^GMAIL_USER=skip' .env && ! grep -q '^user = "[^"]\+"' config.toml; then echo "GMAIL_APP_PASSWORD=skip" >> .env; continue; fi
+                            MAILBOX="$(sed -n 's/^user = "\([^"]*\)".*/\1/p' config.toml | head -1)"
+                            echo "Google app password for ${MAILBOX:-your Gmail} (16 letters, from https://myaccount.google.com/apppasswords). Enter to skip.";;
         NTFY_TOPIC) echo "Optional: phone notifications. Install the 'ntfy' app on your phone, subscribe to a topic name you invent"
                     echo "(e.g. vyron-emre-8231), and type that same name here. Enter to skip.";;
       esac
