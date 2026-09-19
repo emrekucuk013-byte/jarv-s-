@@ -178,7 +178,8 @@ def build_runtime(config, provider, confirmer=None) -> Runtime:
         register_memory_tools(registry, memory)
         register_inbox_tools(registry, inbox)
         agent = Agent(config, provider, registry, confirmer=who_confirms or confirmer, audit=audit, source=source)
-        agent.context_providers.append(lambda user_text: memory.prompt_block(user_text, limit))
+        standing = [str(f) for f in config.get("user", "facts", []) or []]
+        agent.context_providers.append(lambda user_text: memory.prompt_block(user_text, limit, standing))
         agent.context_providers.append(notices_context(inbox))
         return agent
 

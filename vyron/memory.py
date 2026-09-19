@@ -77,8 +77,8 @@ class MemoryStore:
         # fall back to store order (older first), which keeps identity facts near the top.
         return [f for _, f in scored[:limit]]
 
-    def prompt_block(self, query: str, limit: int) -> str:
-        facts = self.relevant(query, limit)
+    def prompt_block(self, query: str, limit: int, standing: list[str] | None = None) -> str:
+        facts = list(standing or []) + [f for f in self.relevant(query, limit) if f not in (standing or [])]
         if not facts:
             return ""
         lines = "\n".join(f"- {f}" for f in facts)

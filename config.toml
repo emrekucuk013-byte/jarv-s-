@@ -5,6 +5,14 @@ name = "Vyron"
 purpose = "a personal daily-driver assistant that acts on my behalf, remembers me, and reaches out only when it counts"
 tone = "warm, plain-spoken, and brief"
 
+[user]
+# Standing facts about you, loaded into every conversation as background knowledge (not instructions).
+# Vyron adds what it learns to state/memory.md; these are the ones you want from day one.
+facts = [
+  "The user's name is Sinan.",
+  "The user owns a company called Visacasa (visacasa.co); the mailbox sinan@visacasa.co is the company address.",
+]
+
 [model]
 # Which brain to use:
 #   "ollama"    = free model running on this computer (no key, no bill; needs the Ollama app)
